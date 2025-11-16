@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+   <script src="node_modules/jquery/dist/jquery.min.js"></script>
+   <script>
+      $(document).ready(() => {
+         var connection = new signalR.HubConnectionBuilder()
+            .withUrl("https://localhost:7040/chathub")
+            .withAutomaticReconnect()
+            .build();
+            
+            async function start() {
+               try {
+                  await connection.start();
+                  console.log("SignalR Connected.");
+               } catch (error) {
+                  setTimeout(()=> start(), 2000);
+               }
+            }
+
+         start();
+
+         connection.on("UserConnected", connectionId => {
+            console.log("User connected: " + connectionId);
+            const durum = $("#durum");
+
+            durum.html(`${connectionId} kullanıcısı bağlandı.`);
+            durum.css("background-color", "green");
+            durum.css("color", "white");
+            durum.css("display", "block");
+            durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+         });
+         
+         connection.on("UserDisconnected", connectionId => {
+            console.log("User disconnected: " + connectionId);
+            const durum = $("#durum");
+
+            durum.html(`${connectionId} kullanıcısı ayrıldı.`);
+            durum.css("background-color", "red");
+            durum.css("color", "white");
+            durum.css("display", "block");
+            durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+         });
+
+         connection.on("clients", clientsData => {
+            let text = "";
+            $.each(clientsData, (index,item) => {
+               text += `<li>${item}</li>`;
+            });
+            $("#clients ul").html(text);
+         });
+
+         connection.onreconnecting(() => {
+            const durum = $("#durum");
+
+            durum.css("background-color", "orange");
+            durum.css("color", "white");
+            durum.html("Yeniden bağlanılıyor...");
+            // temizle varsa bekleyen animasyonları, sonra göster -> bekle -> gizle
+            durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+            console.log("Bağlantı yeniden kuruluyor...");
+         });
+
+         connection.onreconnected(() => {
+            const durum = $("#durum");
+
+            durum.css("background-color", "green");
+            durum.css("color", "white");
+            durum.html("Bağlantı yeniden kuruldu.");
+            durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+
+            console.log("Bağlantı yeniden kuruldu.");
+         });
+
+         connection.onclose(() => {
+            const durum = $("#durum");
+
+            durum.css("background-color", "red");
+            durum.css("color", "white");
+            durum.html("Bağlantı kapandı.");
+            durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+
+         });
+
+         $("button").click(() => {
+            let message = $("#txtMessage").val();
+            connection.invoke("SendMessageAsync", message)
+               .catch(error => console.log("Mesaj gönderilirken hata alınmıştır." + error));
+         });
+
+         console.log(connection.connectionState)
+
+
+         connection.on("receiveMessage", message => {
+            $("#messages").append(`${message}<br>`);
+         });
+
+
+      });
+   </script>
+</head>
+
+<body>
+   <div id="durum" style="display: none;">
+
+   </div>
+
+   <input type="text" id="txtMessage"> <button>Gönder</button>
+   <ul id="messages">
+   </ul>
+   
+   <div id="clients">
+      <ul></ul>
+   </div>
+</body>
+
+</html>

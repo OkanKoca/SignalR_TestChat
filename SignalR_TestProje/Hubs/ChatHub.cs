@@ -4,9 +4,24 @@ namespace SignalR_TestProje.Hubs
 {
     public class ChatHub : Hub
     {
-        public async Task SendMessage(string user, string message)
+        static List<string> clients = new List<string>();
+        //public async Task SendMessageAsync(string message)
+        //{
+        //    await Clients.All.SendAsync("ReceiveMessage", message);
+        //}
+
+        public override async Task OnConnectedAsync()
         {
-            await Clients.All.SendAsync("ReceiveMessage", user, message);
+            clients.Add(Context.ConnectionId);
+            await Clients.All.SendAsync("clients", clients);
+            await Clients.All.SendAsync("UserConnected", Context.ConnectionId);
         }
-    }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            clients.Remove(Context.ConnectionId);
+            await Clients.All.SendAsync("clients", clients);
+            await Clients.All.SendAsync("UserDisconnected", Context.ConnectionId);
+        }
+    } 
 }
