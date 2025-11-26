@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <script src="node_modules/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+   <script src="node_modules/jquery/dist/jquery.min.js"></script>
+   <script>
+      $(document).ready(() => {
+
+         var connection = new signalR.HubConnectionBuilder()
+            .withUrl("https://localhost:7040/messagehub")
+            .withAutomaticReconnect()
+            .build();
+            
+            async function start() {
+               try {
+                  await connection.start();
+                  console.log("SignalR Connected.");
+               } catch (error) {
+                  setTimeout(()=> start(), 2000);
+               }
+            }
+
+         start();
+
+         connection.on("UserConnected", connectionId => {
+            console.log("User connected: " + connectionId);
+            const durum = $("#durum");
+
+            durum.html(`${connectionId} kullanıcısı bağlandı.`);
+            durum.css("background-color", "green");
+            durum.css("color", "white");
+            durum.css("display", "block");
+            durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+         });
+         
+        //  connection.on("UserDisconnected", connectionId => {
+        //     console.log("User disconnected: " + connectionId);
+        //     const durum = $("#durum");
+
+        //     durum.html(`${connectionId} kullanıcısı ayrıldı.`);
+        //     durum.css("background-color", "red");
+        //     durum.css("color", "white");
+        //     durum.css("display", "block");
+        //     durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+        //  });
+
+        //  connection.on("clients", clientsData => {
+        //     let text = "";
+        //     $.each(clientsData, (index,item) => {
+        //        text += `<li>${item}</li>`;
+        //     });
+        //     $("#clients ul").html(text);
+        //  });
+
+        //  connection.onreconnecting(() => {
+        //     const durum = $("#durum");
+
+        //     durum.css("background-color", "orange");
+        //     durum.css("color", "white");
+        //     durum.html("Yeniden bağlanılıyor...");
+        //     // temizle varsa bekleyen animasyonları, sonra göster -> bekle -> gizle
+        //     durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+        //     console.log("Bağlantı yeniden kuruluyor...");
+        //  });
+
+        //  connection.onreconnected(() => {
+        //     const durum = $("#durum");
+
+        //     durum.css("background-color", "green");
+        //     durum.css("color", "white");
+        //     durum.html("Bağlantı yeniden kuruldu.");
+        //     durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+
+        //     console.log("Bağlantı yeniden kuruldu.");
+        //  });
+
+        //  connection.onclose(() => {
+        //     const durum = $("#durum");
+
+        //     durum.css("background-color", "red");
+        //     durum.css("color", "white");
+        //     durum.html("Bağlantı kapandı.");
+        //     durum.stop(true, true).fadeIn(2000).delay(2000).fadeOut(2000);
+
+        //  });
+
+         $("#btnSend").click(() => {
+            let message = $("#txtMessage").val();
+            let connectionIds = $("#connectionIds").val().split(",");
+            //let groupName = $("input[name='group']:checked").val();
+
+            let groups = $("#txtGroups").val().split(",");
+
+            if (!message) return;
+
+            connection.invoke("SendMessageAsync", message, groups).catch(err => console.error(err.toString()));
+         });
+
+         console.log(connection.connectionState)
+
+
+         connection.on("receiveMessage", message => {
+            $("#messages").append(`${message}<br>`);
+         });
+
+         let connectionIdGlobal = "";
+
+         connection.on("getConnectionId", connectionId => {
+            connectionIdGlobal = connectionId;
+            $("#connectionId").html(`Bağlantı Id'niz: ${connectionId}`);
+         });
+
+         $("#btnJoinGroup").click(() => {   
+            $("input[name = 'group']:checked").each(function() {
+               let groupName = $(this).val();
+               connection.invoke("JoinGroup", connectionIdGlobal, groupName).catch(err => console.error(err.toString()));
+            });
+         });
+
+      });
+   </script>
+</head>
+
+<body>
+    <div style="background-color: black; color: white;" id = "connectionId"></div>
+
+    <input type="radio" name="group" value="A"> A
+    <input type="radio" name="group" value="B"> B
+    <input type="radio" name="group" value="C"> C
+
+    <button id="btnJoinGroup">Join Group</button>
+
+    <br>
+
+   <div id="durum" style="display: none;">
+
+   </div>
+
+   <input type="text" placeholder="message" id="txtMessage"> 
+   <input type="text" placeholder="groups" id="txtGroups"> 
+   
+   <br>
+   <button id="btnSend">Send</button>
+   <br>
+   <textarea placeholder="connectionIds (comma separated)" id="connectionIds" rows="10" cols="50"></textarea>
+   <br>
+   <ul id="messages">
+   </ul>
+
+</body>
+
+</html>

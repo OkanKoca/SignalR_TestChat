@@ -10,6 +10,7 @@
             .withUrl("https://localhost:7040/chathub")
             .withAutomaticReconnect()
             .build();
+
             
             async function start() {
                try {
@@ -86,8 +87,20 @@
 
          $("button").click(() => {
             let message = $("#txtMessage").val();
-            connection.invoke("SendMessageAsync", message)
-               .catch(error => console.log("Mesaj gönderilirken hata alınmıştır." + error));
+            if (!message) return;
+
+            const url = `https://localhost:7040/api/home/${encodeURIComponent(message)}`;
+
+            fetch(url, { method: 'GET' })
+               .then(async response => {
+                  if (!response.ok) {
+                     const text = await response.text();
+                     console.error('Sunucu hatası:', response.status, text);
+                     return;
+                  }
+                  console.log('Mesaj gönderildi.');
+               })
+               .catch(error => console.error('Mesaj gönderilirken hata alındı:', error));
          });
 
          console.log(connection.connectionState)

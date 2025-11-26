@@ -45,6 +45,7 @@ app.MapControllers();
 
 app.MapRazorPages();
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<MessageHub>("/messageHub");
 
 
 
